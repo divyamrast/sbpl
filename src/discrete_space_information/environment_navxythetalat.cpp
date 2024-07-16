@@ -875,10 +875,9 @@ bool EnvironmentNAVXYTHETALATTICE::ReadMotionPrimitives(FILE* fMotPrims)
 void EnvironmentNAVXYTHETALATTICE::ComputeReplanningDataforAction(
     EnvNAVXYTHETALATAction_t* action)
 {
-    int j;
-
     // iterate over all the cells involved in the action
     sbpl_xy_theta_cell_t startcell3d, endcell3d;
+
     for (int i = 0; i < (int)action->intersectingcellsV.size(); i++) {
         // compute the translated affected search Pose - what state has an
         // outgoing action whose intersecting cell is at 0,0
@@ -898,23 +897,8 @@ void EnvironmentNAVXYTHETALATTICE::ComputeReplanningDataforAction(
         endcell3d.y = startcell3d.y + action->dY;
 
         //store the cells if not already there
-        for (j = 0; j < (int)affectedsuccstatesV.size(); j++) {
-            if (affectedsuccstatesV.at(j) == endcell3d) {
-                break;
-            }
-        }
-        if (j == (int)affectedsuccstatesV.size()) {
-            affectedsuccstatesV.push_back(endcell3d);
-        }
-
-        for (j = 0; j < (int)affectedpredstatesV.size(); j++) {
-            if (affectedpredstatesV.at(j) == startcell3d) {
-                break;
-            }
-        }
-        if (j == (int)affectedpredstatesV.size()) {
-            affectedpredstatesV.push_back(startcell3d);
-        }
+        affected_succ_states_.insert(endcell3d);
+        affected_pred_states_.insert(startcell3d);
     } // over intersecting cells
 
     // add the centers since with h2d we are using these in cost computations
@@ -937,23 +921,8 @@ void EnvironmentNAVXYTHETALATTICE::ComputeReplanningDataforAction(
     endcell3d.y = startcell3d.y + action->dY;
 
     //store the cells if not already there
-    for (j = 0; j < (int)affectedsuccstatesV.size(); j++) {
-        if (affectedsuccstatesV.at(j) == endcell3d) {
-            break;
-        }
-    }
-    if (j == (int)affectedsuccstatesV.size()) {
-        affectedsuccstatesV.push_back(endcell3d);
-    }
-
-    for (j = 0; j < (int)affectedpredstatesV.size(); j++) {
-        if (affectedpredstatesV.at(j) == startcell3d) {
-            break;
-        }
-    }
-    if (j == (int)affectedpredstatesV.size()) {
-        affectedpredstatesV.push_back(startcell3d);
-    }
+    affected_succ_states_.insert(endcell3d);
+    affected_pred_states_.insert(startcell3d);
 
     //---intersecting cell = outcome state
     // compute the translated affected search Pose - what state has an outgoing
@@ -973,23 +942,9 @@ void EnvironmentNAVXYTHETALATTICE::ComputeReplanningDataforAction(
     endcell3d.x = startcell3d.x + action->dX;
     endcell3d.y = startcell3d.y + action->dY;
 
-    for (j = 0; j < (int)affectedsuccstatesV.size(); j++) {
-        if (affectedsuccstatesV.at(j) == endcell3d) {
-            break;
-        }
-    }
-    if (j == (int)affectedsuccstatesV.size()) {
-        affectedsuccstatesV.push_back(endcell3d);
-    }
-
-    for (j = 0; j < (int)affectedpredstatesV.size(); j++) {
-        if (affectedpredstatesV.at(j) == startcell3d) {
-            break;
-        }
-    }
-    if (j == (int)affectedpredstatesV.size()) {
-        affectedpredstatesV.push_back(startcell3d);
-    }
+    //store the cells if not already there
+    affected_succ_states_.insert(endcell3d);
+    affected_pred_states_.insert(startcell3d);
 }
 
 // computes all the 3D states whose outgoing actions are potentially affected
@@ -2945,7 +2900,6 @@ void EnvironmentNAVXYTHETALAT::GetPredsofChangedEdges(
     std::vector<int>* preds_of_changededgesIDV)
 {
     nav2dcell_t cell;
-    sbpl_xy_theta_cell_t affectedcell;
     EnvNAVXYTHETALATHashEntry_t* affectedHashEntry;
 
     // increment iteration for processing savings
@@ -2955,8 +2909,7 @@ void EnvironmentNAVXYTHETALAT::GetPredsofChangedEdges(
         cell = changedcellsV->at(i);
 
         // now iterate over all states that could potentially be affected
-        for (int sind = 0; sind < (int)affectedpredstatesV.size(); sind++) {
-            affectedcell = affectedpredstatesV.at(sind);
+        for (sbpl_xy_theta_cell_t affectedcell : affected_pred_states_) {
 
             // translate to correct for the offset
             affectedcell.x = affectedcell.x + cell.x;
@@ -2977,7 +2930,6 @@ void EnvironmentNAVXYTHETALAT::GetSuccsofChangedEdges(
     std::vector<int>* succs_of_changededgesIDV)
 {
     nav2dcell_t cell;
-    sbpl_xy_theta_cell_t affectedcell;
     EnvNAVXYTHETALATHashEntry_t* affectedHashEntry;
 
     throw SBPL_Exception("ERROR: getsuccs is not supported currently");
@@ -2990,8 +2942,7 @@ void EnvironmentNAVXYTHETALAT::GetSuccsofChangedEdges(
         cell = changedcellsV->at(i);
 
         // now iterate over all states that could potentially be affected
-        for (int sind = 0; sind < (int)affectedsuccstatesV.size(); sind++) {
-            affectedcell = affectedsuccstatesV.at(sind);
+        for (sbpl_xy_theta_cell_t affectedcell : affected_succ_states_) {
 
             // translate to correct for the offset
             affectedcell.x = affectedcell.x + cell.x;
